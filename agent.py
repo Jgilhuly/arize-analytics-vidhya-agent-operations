@@ -49,12 +49,21 @@ workflow.add_edge(START, "agent")
 workflow.add_conditional_edges("agent", should_continue, ["tools", END])
 workflow.add_edge("tools", "agent")
 
+# Expose the compiled app at module level
 app = workflow.compile()
 
 def run_agent(question: str) -> str:
     """Run the agent with a given question"""
-    # Run the agent
+    # Initialize variable to store the final response
+    final_response = None
+    
+    # Run the agent with streaming
     for chunk in app.stream(
         {"messages": [("human", question)]}, stream_mode="values"
     ):
         chunk["messages"][-1].pretty_print()
+        # Keep track of the latest response
+        final_response = chunk["messages"][-1].content
+    
+    # Return the final response content
+    return final_response
