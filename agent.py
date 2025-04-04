@@ -1,6 +1,6 @@
 from typing import Annotated, Sequence, TypedDict
 
-from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, MessagesState, START, StateGraph
 from langgraph.prebuilt import ToolNode
@@ -51,19 +51,3 @@ workflow.add_edge("tools", "agent")
 
 # Expose the compiled app at module level
 app = workflow.compile()
-
-def run_agent(question: str) -> str:
-    """Run the agent with a given question"""
-    # Initialize variable to store the final response
-    final_response = None
-    
-    # Run the agent with streaming
-    for chunk in app.stream(
-        {"messages": [("human", question)]}, stream_mode="values"
-    ):
-        chunk["messages"][-1].pretty_print()
-        # Keep track of the latest response
-        final_response = chunk["messages"][-1].content
-    
-    # Return the final response content
-    return final_response

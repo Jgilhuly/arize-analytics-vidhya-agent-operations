@@ -1,10 +1,10 @@
 import os
 from getpass import getpass
 from typing import List, AsyncGenerator
+from langchain_core.messages import HumanMessage
 from tqdm import tqdm
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
-from agent import run_agent, app as agent_app
+from fastapi import FastAPI
+from agent import app as agent_app
 from phoenix.otel import register
 
 # Set up environment variables
@@ -27,17 +27,22 @@ tracer_provider = register(
 def run_single_question(question: str) -> str:
     """Run the agent with a single question"""
     try:
-        result = run_agent(question)
-        return result
+        result = agent_app.invoke({"messages": [HumanMessage(content=question)]})
+        return result["messages"][-1].content
     except Exception as e:
         print(f"Error processing question: {question}")
         print(e)
 
+def run_multiple_questions(questions: List[str]) -> None:
+    """Run the agent with multiple questions"""
+    for question in tqdm(questions, desc="Processing questions"):
+        run_single_question(question)
+        
 async def stream_agent_response(question: str) -> AsyncGenerator[str, None]:
     """Stream the agent's response for a given question"""
     try:
         for chunk in agent_app.stream(
-            {"messages": [("human", question)]}, stream_mode="values"
+            {"messages": [HumanMessage(content=question)]}, stream_mode="values"
         ):
             response = chunk["messages"][-1].content
             if response:
@@ -46,11 +51,6 @@ async def stream_agent_response(question: str) -> AsyncGenerator[str, None]:
         print(f"Error streaming response for question: {question}")
         print(e)
         yield f"data: Error: {str(e)}\n\n"
-
-def run_multiple_questions(questions: List[str]) -> None:
-    """Run the agent with multiple questions"""
-    for question in tqdm(questions, desc="Processing questions"):
-        run_single_question(question)
 
 if __name__ == "__main__":
     import uvicorn
