@@ -6,6 +6,10 @@ from tqdm import tqdm
 from fastapi import FastAPI
 from agent import app as agent_app
 from phoenix.otel import register
+from fastapi import HTTPException
+from typing import List
+from pydantic import BaseModel
+from fastapi.responses import StreamingResponse
 
 # Set up environment variables
 if os.getenv("OPENAI_API_KEY") is None:
@@ -53,3 +57,32 @@ async def stream_agent_response(question: str) -> AsyncGenerator[str, None]:
         yield f"data: Error: {str(e)}\n\n"
 
 app = FastAPI(title="Agent Operations API")
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy"}
+
+class QuestionInput(BaseModel):
+    question: str
+
+@app.post("/invoke")
+async def process_question(input_data: QuestionInput):
+    """Process a single question"""
+    try:
+        # Run the agent directly
+        result = run_single_question(input_data.question)
+        return {"result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/invoke-streaming")
+async def process_question_streaming(input_data: QuestionInput):
+    """Process a single question with streaming response"""
+    try:
+        return StreamingResponse(
+            stream_agent_response(input_data.question),
+            media_type="text/event-stream"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
