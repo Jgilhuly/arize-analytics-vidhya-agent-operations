@@ -52,25 +52,4 @@ async def stream_agent_response(question: str) -> AsyncGenerator[str, None]:
         print(e)
         yield f"data: Error: {str(e)}\n\n"
 
-if __name__ == "__main__":
-    import uvicorn
-    from fastapi.middleware.cors import CORSMiddleware
-    from routes import router
-
-    # Create FastAPI app
-    app = FastAPI(title="Agent Operations API")
-    
-    # Add CORS middleware
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-    
-    # Include routes
-    app.include_router(router)
-    
-    # Run the server
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+app = FastAPI(title="Agent Operations API")
